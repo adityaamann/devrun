@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>devrun — set up any GitHub repo instantly</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0d;
+      --surface: #141414;
+      --border: #1f1f1f;
+      --border-bright: #2a2a2a;
+      --text: #e8e8e0;
+      --muted: #5a5a52;
+      --accent: #c8f060;
+      --accent-dim: rgba(200, 240, 96, 0.08);
+      --font-mono: 'DM Mono', monospace;
+      --font-serif: 'Instrument Serif', serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 14px;
+      line-height: 1.7;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* noise overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.4;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 48px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(13,13,13,0.85);
+      backdrop-filter: blur(12px);
+    }
+
+    .nav-logo {
+      font-size: 15px;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .nav-logo span { color: var(--accent); }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 13px;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--text); }
+
+    .nav-cta {
+      background: var(--accent);
+      color: #0d0d0d !important;
+      padding: 8px 18px;
+      border-radius: 4px;
+      font-weight: 500;
+      transition: opacity 0.2s !important;
+    }
+
+    .nav-cta:hover { opacity: 0.85; }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+      position: relative;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--border-bright);
+      padding: 6px 14px;
+      border-radius: 100px;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 40px;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .hero-badge-dot {
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .hero h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(48px, 8vw, 96px);
+      font-weight: 400;
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      max-width: 800px;
+      margin-bottom: 24px;
+      animation: fadeUp 0.6s 0.1s ease both;
+    }
+
+    .hero h1 em {
+      font-style: italic;
+      color: var(--accent);
+    }
+
+    .hero-sub {
+      font-size: 15px;
+      color: var(--muted);
+      max-width: 440px;
+      margin-bottom: 48px;
+      animation: fadeUp 0.6s 0.2s ease both;
+      font-family: var(--font-mono);
+    }
+
+    .hero-command {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      background: var(--surface);
+      border: 1px solid var(--border-bright);
+      border-radius: 8px;
+      overflow: hidden;
+      animation: fadeUp 0.6s 0.3s ease both;
+      margin-bottom: 16px;
+    }
+
+    .hero-command-prefix {
+      padding: 14px 16px;
+      color: var(--accent);
+      border-right: 1px solid var(--border-bright);
+      font-size: 13px;
+    }
+
+    .hero-command-text {
+      padding: 14px 20px;
+      font-size: 14px;
+      color: var(--text);
+      flex: 1;
+      text-align: left;
+    }
+
+    .copy-btn {
+      padding: 14px 20px;
+      background: none;
+      border: none;
+      border-left: 1px solid var(--border-bright);
+      color: var(--muted);
+      cursor: pointer;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+
+    .copy-btn:hover { color: var(--accent); background: var(--accent-dim); }
+
+    .hero-note {
+      font-size: 12px;
+      color: var(--muted);
+      animation: fadeUp 0.6s 0.4s ease both;
+    }
+
+    .hero-note a { color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── DEMO TERMINAL ── */
+    .demo {
+      padding: 80px 24px;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 24px;
+    }
+
+    .terminal {
+      background: var(--surface);
+      border: 1px solid var(--border-bright);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .terminal-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot-r { background: #ff5f57; }
+    .dot-y { background: #febc2e; }
+    .dot-g { background: #28c840; }
+
+    .terminal-title {
+      font-size: 12px;
+      color: var(--muted);
+      margin-left: auto;
+      margin-right: auto;
+      transform: translateX(-20px);
+    }
+
+    .terminal-body {
+      padding: 24px;
+      font-size: 13px;
+      line-height: 2;
+    }
+
+    .t-cmd { color: var(--accent); }
+    .t-url { color: #7dd3fc; }
+    .t-success { color: #86efac; }
+    .t-warn { color: #fde68a; }
+    .t-muted { color: var(--muted); }
+    .t-label { color: #c084fc; }
+    .t-divider { color: var(--border-bright); }
+    .t-bold { color: var(--text); font-weight: 500; }
+
+    /* ── HOW IT WORKS ── */
+    .how {
+      padding: 80px 24px;
+      max-width: 760px;
+      margin: 0 auto;
+      border-top: 1px solid var(--border);
+    }
+
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      margin-top: 40px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      gap: 24px;
+      padding: 32px 0;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+
+    .step:last-child { border-bottom: none; }
+
+    .step-num {
+      font-size: 11px;
+      color: var(--accent);
+      padding-top: 4px;
+      font-weight: 500;
+    }
+
+    .step-content h3 {
+      font-family: var(--font-serif);
+      font-size: 22px;
+      font-weight: 400;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .step-content p {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.8;
+      margin-bottom: 16px;
+    }
+
+    .step-code {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: var(--accent);
+      display: inline-block;
+    }
+
+    /* ── INSTALL ── */
+    .install {
+      padding: 80px 24px;
+      max-width: 760px;
+      margin: 0 auto;
+      border-top: 1px solid var(--border);
+    }
+
+    .install-steps {
+      margin-top: 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .install-step {
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .install-step-num {
+      width: 28px; height: 28px;
+      border: 1px solid var(--border-bright);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: var(--muted);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .install-step-body {}
+
+    .install-step-body p {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+
+    .install-step-body strong {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .code-block {
+      background: var(--surface);
+      border: 1px solid var(--border-bright);
+      border-radius: 6px;
+      padding: 14px 16px;
+      font-size: 13px;
+      color: var(--text);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .code-block code { color: var(--accent); flex: 1; }
+
+    .inline-copy {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: all 0.2s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .inline-copy:hover { color: var(--accent); background: var(--accent-dim); }
+
+    .env-block {
+      background: var(--surface);
+      border: 1px solid var(--border-bright);
+      border-radius: 6px;
+      padding: 14px 16px;
+      font-size: 13px;
+    }
+
+    .env-block .comment { color: var(--muted); }
+    .env-block .key { color: var(--text); }
+    .env-block .val { color: var(--accent); }
+
+    .install-note {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    .install-note a {
+      color: var(--text);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 100%;
+    }
+
+    .footer-left {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .footer-left span { color: var(--text); }
+
+    .footer-right {
+      display: flex;
+      gap: 24px;
+    }
+
+    .footer-right a {
+      font-size: 13px;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer-right a:hover { color: var(--text); }
+
+    /* ── SUPPORTED ── */
+    .supported {
+      padding: 80px 24px;
+      max-width: 760px;
+      margin: 0 auto;
+      border-top: 1px solid var(--border);
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 32px;
+    }
+
+    .tag {
+      border: 1px solid var(--border-bright);
+      padding: 8px 16px;
+      border-radius: 100px;
+      font-size: 12px;
+      color: var(--muted);
+      transition: all 0.2s;
+    }
+
+    .tag:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    @media (max-width: 600px) {
+      nav { padding: 16px 20px; }
+      .nav-links { display: none; }
+      footer { flex-direction: column; gap: 16px; text-align: center; }
+      footer { padding: 32px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">dev<span>run</span></a>
+  <ul class="nav-links">
+    <li><a href="#how">how it works</a></li>
+    <li><a href="#install">install</a></li>
+    <li><a href="https://github.com/adityaamann/devrun" target="_blank" class="nav-cta">GitHub →</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">
+    <div class="hero-badge-dot"></div>
+    open source · free · AI-powered · auto-updating
+  </div>
+
+  <h1>Set up any repo<br /><em>instantly.</em></h1>
+
+  <p class="hero-sub">
+    Stop wasting hours on broken READMEs and dependency errors.
+    One command. Any GitHub repo. Done.
+  </p>
+
+  <div class="hero-command">
+    <span class="hero-command-prefix">$</span>
+    <span class="hero-command-text" id="hero-cmd">devrun https://github.com/expressjs/express</span>
+    <button class="copy-btn" onclick="copyHero()">copy</button>
+  </div>
+
+  <div style="display:flex; gap:12px; margin-bottom:16px; animation: fadeUp 0.6s 0.4s ease both;">
+    <a href="https://github.com/adityaamann/devrun" target="_blank" style="display:inline-flex; align-items:center; gap:8px; background:var(--accent); color:#0d0d0d; padding:12px 24px; border-radius:6px; text-decoration:none; font-size:13px; font-weight:500;">
+      View on GitHub →
+    </a>
+    <a href="#install" style="display:inline-flex; align-items:center; gap:8px; border:1px solid var(--border-bright); color:var(--text); padding:12px 24px; border-radius:6px; text-decoration:none; font-size:13px;">
+      Get Started
+    </a>
+  </div>
+
+  <p class="hero-note">
+    Free to use · Powered by <a href="https://console.groq.com" target="_blank">Groq API</a>
+  </p>
+</section>
+
+<!-- DEMO TERMINAL -->
+<section class="demo">
+  <p class="section-label">// what it looks like</p>
+  <div class="terminal">
+    <div class="terminal-bar">
+      <div class="dot dot-r"></div>
+      <div class="dot dot-y"></div>
+      <div class="dot dot-g"></div>
+      <span class="terminal-title">terminal</span>
+    </div>
+    <div class="terminal-body">
+      <div><span class="t-muted">~ </span><span class="t-cmd">devrun</span> <span class="t-url">https://github.com/expressjs/express</span></div>
+      <div>&nbsp;</div>
+      <div><span class="t-muted">Cloning repo...</span></div>
+      <div><span class="t-success">✓ Clone successful</span></div>
+      <div>&nbsp;</div>
+      <div><span class="t-muted">Analyzing repo with AI...</span></div>
+      <div>&nbsp;</div>
+      <div><span class="t-muted">Running: </span><span class="t-cmd">npm install</span></div>
+      <div><span class="t-muted">  added 386 packages in 44s</span></div>
+      <div><span class="t-success">✓ Install successful</span></div>
+      <div>&nbsp;</div>
+      <div><span class="t-divider">════════════════════════════════════════</span></div>
+      <div><span class="t-bold">DEVRUN COMPLETE</span></div>
+      <div><span class="t-divider">════════════════════════════════════════</span></div>
+      <div><span class="t-label">Project Type </span><span class="t-muted">: </span><span class="t-bold">Node.js</span></div>
+      <div><span class="t-label">Location     </span><span class="t-muted">: </span><span class="t-bold">./express</span></div>
+      <div><span class="t-label">Dependencies </span><span class="t-muted">: </span><span class="t-success">Installed</span></div>
+      <div>&nbsp;</div>
+      <div><span class="t-muted">To start the project:</span></div>
+      <div><span class="t-muted">  </span><span class="t-cmd">cd express && node index.js</span></div>
+      <div><span class="t-divider">════════════════════════════════════════</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- UPDATE TERMINAL -->
+<section class="demo">
+  <p class="section-label">// keep it updated</p>
+  <div class="terminal">
+    <div class="terminal-bar">
+      <div class="dot dot-r"></div>
+      <div class="dot dot-y"></div>
+      <div class="dot dot-g"></div>
+      <span class="terminal-title">terminal</span>
+    </div>
+    <div class="terminal-body">
+      <div><span class="t-muted">~ </span><span class="t-cmd">devrun</span> <span class="t-url">--update</span></div>
+      <div>&nbsp;</div>
+      <div><span class="t-muted">Updating devrun...</span></div>
+      <div><span class="t-success">Already up to date.</span></div>
+      <div><span class="t-muted">Reinstalling...</span></div>
+      <div><span class="t-success">✓ devrun updated successfully</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="how">
+  <p class="section-label">// how it works</p>
+  <div class="steps">
+
+    <div class="step">
+      <span class="step-num">01</span>
+      <div class="step-content">
+        <h3>You give it a GitHub URL</h3>
+        <p>Point devrun at any public GitHub repository. It doesn't matter what stack it is — Node.js, Python, anything.</p>
+        <div class="step-code">devrun https://github.com/someone/anyrepo</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <span class="step-num">02</span>
+      <div class="step-content">
+        <h3>AI reads the repo and figures it out</h3>
+        <p>devrun clones the repo, reads all config files — package.json, requirements.txt, Dockerfile, .env.example — and sends them to an AI model. The AI identifies the project type, the exact install command, the start command, and any environment variables needed.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <span class="step-num">03</span>
+      <div class="step-content">
+        <h3>It sets everything up for you</h3>
+        <p>devrun runs the install command automatically, creates a .env file if environment variables are needed, and tells you exactly how to start the project. No guessing, no reading broken READMEs.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <span class="step-num">04</span>
+      <div class="step-content">
+        <h3>Stay up to date with one command</h3>
+        <p>When devrun releases updates, you don't need to manually reinstall anything. One command pulls the latest version and reinstalls automatically.</p>
+        <div class="step-code">devrun --update</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- SUPPORTED -->
+<section class="supported">
+  <p class="section-label">// supported stacks</p>
+  <div class="tags">
+    <div class="tag">Node.js · npm</div>
+    <div class="tag">Node.js · yarn</div>
+    <div class="tag">Python · pip</div>
+    <div class="tag">Python · poetry</div>
+    <div class="tag">Python · setup.py</div>
+    <div class="tag">Python · pyproject.toml</div>
+    <div class="tag">more coming soon</div>
+  </div>
+</section>
+
+<!-- INSTALL -->
+<section class="install" id="install">
+  <p class="section-label">// get started</p>
+
+  <div class="install-steps">
+
+    <div class="install-step">
+      <div class="install-step-num">1</div>
+      <div class="install-step-body">
+        <p><strong>Clone devrun</strong></p>
+        <div class="code-block">
+          <code>git clone https://github.com/adityaamann/devrun && cd devrun</code>
+          <button class="inline-copy" onclick="copyCode(this, 'git clone https://github.com/adityaamann/devrun && cd devrun')">copy</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="install-step">
+      <div class="install-step-num">2</div>
+      <div class="install-step-body">
+        <p><strong>Install dependencies</strong></p>
+        <div class="code-block">
+          <code>pip3 install -r requirements.txt</code>
+          <button class="inline-copy" onclick="copyCode(this, 'pip3 install -r requirements.txt')">copy</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="install-step">
+      <div class="install-step-num">3</div>
+      <div class="install-step-body">
+        <p><strong>Get a free Groq API key</strong> — no credit card needed</p>
+        <div class="code-block">
+          <code>console.groq.com → sign up → create API key</code>
+        </div>
+        <p class="install-note">Takes 2 minutes. Free tier is more than enough.</p>
+      </div>
+    </div>
+
+    <div class="install-step">
+      <div class="install-step-num">4</div>
+      <div class="install-step-body">
+        <p><strong>Create a .env file</strong> in the devrun folder</p>
+        <div class="env-block">
+          <div class="comment"># .env</div>
+          <div><span class="key">GROQ_API_KEY</span>=<span class="val">your_key_here</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="install-step">
+      <div class="install-step-num">5</div>
+      <div class="install-step-body">
+        <p><strong>Install devrun as a CLI command</strong></p>
+        <div class="code-block">
+          <code>pip3 install -e .</code>
+          <button class="inline-copy" onclick="copyCode(this, 'pip3 install -e .')">copy</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="install-step">
+      <div class="install-step-num">6</div>
+      <div class="install-step-body">
+        <p><strong>Use it on any repo</strong></p>
+        <div class="code-block">
+          <code>devrun https://github.com/anyone/anyrepo</code>
+          <button class="inline-copy" onclick="copyCode(this, 'devrun https://github.com/anyone/anyrepo')">copy</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="install-step">
+      <div class="install-step-num">7</div>
+      <div class="install-step-body">
+        <p><strong>Keep devrun up to date</strong></p>
+        <div class="code-block">
+          <code>devrun --update</code>
+          <button class="inline-copy" onclick="copyCode(this, 'devrun --update')">copy</button>
+        </div>
+        <p class="install-note">Pulls latest changes from GitHub and reinstalls automatically.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-left">
+    built by <span>Aditya Aman</span> · open source
+  </div>
+  <div class="footer-right">
+    <a href="https://github.com/adityaamann/devrun" target="_blank">GitHub</a>
+    <a href="https://console.groq.com" target="_blank">Groq</a>
+  </div>
+</footer>
+
+<script>
+  function copyHero() {
+    const text = document.getElementById('hero-cmd').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.querySelector('.copy-btn');
+      btn.textContent = 'copied!';
+      setTimeout(() => btn.textContent = 'copy', 2000);
+    });
+  }
+
+  function copyCode(btn, text) {
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = 'copied!';
+      setTimeout(() => btn.textContent = 'copy', 2000);
+    });
+  }
+</script>
+
+</body>
+</html>
